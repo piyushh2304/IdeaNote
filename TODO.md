@@ -1,0 +1,9 @@
+- [x] Create README.md with project title and description
+- [x] Add tech stack section
+- [x] Add prerequisites section
+- [x] Add installation steps
+- [x] Add running the application instructions
+- [x] Add features section
+- [x] Add scripts section
+- [x] Add database information
+- [x] Add contributing and license sections

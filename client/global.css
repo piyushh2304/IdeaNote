@@ -1,0 +1,117 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 219 40% 98%;
+    --foreground: 227 35% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 227 35% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 227 35% 13%;
+
+    --primary: 262 84% 58%;
+    --primary-foreground: 222 47% 10%;
+
+    --secondary: 208 93% 94%;
+    --secondary-foreground: 227 45% 20%;
+
+    --muted: 220 24% 92%;
+    --muted-foreground: 227 17% 42%;
+
+    --accent: 191 97% 62%;
+    --accent-foreground: 209 61% 11%;
+
+    --destructive: 350 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 30% 88%;
+    --input: 220 30% 88%;
+    --ring: 262 84% 58%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 227 53% 13%;
+    --sidebar-primary: 262 84% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 208 93% 94%;
+    --sidebar-accent-foreground: 227 53% 13%;
+    --sidebar-border: 220 30% 88%;
+    --sidebar-ring: 262 84% 58%;
+  }
+
+  .dark {
+    --background: 235 48% 9%;
+    --foreground: 210 40% 96%;
+
+    --card: 236 42% 12%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 236 42% 12%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 263 89% 70%;
+    --primary-foreground: 235 48% 9%;
+
+    --secondary: 233 32% 18%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 233 32% 18%;
+    --muted-foreground: 217 32% 75%;
+
+    --accent: 192 80% 48%;
+    --accent-foreground: 235 48% 9%;
+
+    --destructive: 354 76% 51%;
+    --destructive-foreground: 210 40% 96%;
+
+    --border: 233 32% 22%;
+    --input: 233 32% 22%;
+    --ring: 263 89% 70%;
+
+    --sidebar-background: 233 33% 14%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 263 89% 70%;
+    --sidebar-primary-foreground: 235 48% 9%;
+    --sidebar-accent: 232 31% 20%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 233 32% 22%;
+    --sidebar-ring: 263 89% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading tracking-tight text-foreground;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--primary));
+  }
+}

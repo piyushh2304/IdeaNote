@@ -1,0 +1,23 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - sqlite-data:/app/data
+    environment:
+      - SQLITE_DB_PATH=/app/data/ideas.sqlite
+
+volumes:
+  sqlite-data:
