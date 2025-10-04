@@ -13,7 +13,7 @@ export default defineConfig(() => ({
     },
   },
   build: {
-    outDir: "dist/spa",
+    outDir: "public",
   },
   plugins: [react()],
   resolve: {
