@@ -8,10 +8,10 @@ export default defineConfig({
       entry: path.resolve(__dirname, "server/node-build.ts"),
       name: "server",
       fileName: "production",
-      formats: ["es"],
+      formats: ["cjs"],
     },
     outDir: "dist/server",
-    target: "node22",
+    target: "node20",
     ssr: true,
     rollupOptions: {
       external: [
@@ -34,8 +34,8 @@ export default defineConfig({
         "cors",
       ],
       output: {
-        format: "es",
-        entryFileNames: "[name].mjs",
+        format: "cjs",
+        entryFileNames: "[name].cjs",
       },
     },
     minify: false, // Keep readable for debugging

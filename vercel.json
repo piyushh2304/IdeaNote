@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "engines": {
+    "node": "20"
+  },
   "builds": [
     {
       "src": "package.json",
