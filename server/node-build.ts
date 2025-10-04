@@ -6,7 +6,7 @@ const app = createServer();
 const port = process.env.PORT || 3000;
 
 // In production, serve the built SPA files
-const distPath = path.join(__dirname, "../public");
+const distPath = path.join(__dirname, "public");
 
 // Serve static files
 app.use(express.static(distPath));
