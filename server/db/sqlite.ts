@@ -96,6 +96,9 @@ export async function listAllIdeas() {
 export async function insertIdea(text: string) {
   const db = await initialize();
   const sanitized = text.trim();
+  if (!sanitized) {
+    throw new Error("Idea text cannot be empty");
+  }
   const created_at = new Date().toISOString();
   const stmt = db.prepare("INSERT INTO ideas (text, votes, created_at) VALUES (?, ?, ?)");
   const result = stmt.run(sanitized, 0, created_at);
