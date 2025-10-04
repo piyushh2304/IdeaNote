@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import sqlite3 from "sqlite3";
+import initSqlJs from "sql.js";
 import { fileURLToPath } from "url";
 
 const DEFAULT_DB_PATH = "data/ideas.sqlite";
@@ -8,103 +8,72 @@ const DEFAULT_DB_PATH = "data/ideas.sqlite";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let database: sqlite3.Database | null = null;
-let initializing: Promise<sqlite3.Database> | null = null;
+let database: initSqlJs.Database | null = null;
+let SQL: initSqlJs.SqlJsStatic | null = null;
 
-async function initialize(): Promise<sqlite3.Database> {
+async function initialize(): Promise<initSqlJs.Database> {
   if (database) {
     return database;
   }
-  if (initializing) {
-    return initializing;
+
+  if (!SQL) {
+    SQL = await initSqlJs();
   }
 
-  initializing = new Promise((resolve, reject) => {
-    const dbPath = process.env.SQLITE_DB_PATH ?? DEFAULT_DB_PATH;
-    const directory = path.dirname(dbPath);
-    if (!fs.existsSync(directory)) {
-      fs.mkdirSync(directory, { recursive: true });
+  const dbPath = process.env.SQLITE_DB_PATH ?? DEFAULT_DB_PATH;
+  const directory = path.dirname(dbPath);
+  if (!fs.existsSync(directory)) {
+    fs.mkdirSync(directory, { recursive: true });
+  }
+
+  let db: initSqlJs.Database;
+  if (fs.existsSync(dbPath)) {
+    const filebuffer = fs.readFileSync(dbPath);
+    db = new SQL.Database(filebuffer);
+  } else {
+    db = new SQL.Database();
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ideas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      text TEXT NOT NULL,
+      votes INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+  `);
+
+  // Insert seed data if table is empty
+  const count = db.exec("SELECT COUNT(*) as count FROM ideas");
+  if (count[0].values[0][0] === 0) {
+    const seedIdeas = [
+      {
+        text: "A smart mirror with built-in sensors and AI that provides real-time health insights. When a user stands in front of it, it performs facial analysis, posture detection, and skin condition monitoring. Integrated with smart scales and wearables, it gives daily health reports, suggests workouts, and even detects early signs of illness through visual and behavioral data (e.g., dehydration, fatigue).",
+        created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        votes: 5,
+      },
+      {
+        text: "An AR app for smart glasses that translates foreign languages in real-time and overlays the translated text directly onto the world. Whether you’re reading a street sign in Tokyo or having a conversation in Paris, it displays subtitles or translated signage naturally. It also learns context and tone over time, making the translations smarter and more nuanced. Ideal for travelers, international workers, or global students.",
+        created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        votes: 3,
+      },
+    ];
+    const insert = db.prepare("INSERT INTO ideas (text, votes, created_at) VALUES (?, ?, ?)");
+    for (const idea of seedIdeas) {
+      insert.run(idea.text, idea.votes, idea.created_at);
     }
-
-    const db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      db.run(
-        `
-        CREATE TABLE IF NOT EXISTS ideas (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          text TEXT NOT NULL,
-          votes INTEGER NOT NULL DEFAULT 0,
-          created_at TEXT NOT NULL
-        );
-      `,
-        (err) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          // Insert seed data if table is empty
-          db.get("SELECT COUNT(*) as count FROM ideas", (err, row: any) => {
-            if (err) {
-              reject(err);
-              return;
-            }
-              if (row.count === 0) {
-                const seedIdeas = [
-                  {
-                    text: "A smart mirror with built-in sensors and AI that provides real-time health insights. When a user stands in front of it, it performs facial analysis, posture detection, and skin condition monitoring. Integrated with smart scales and wearables, it gives daily health reports, suggests workouts, and even detects early signs of illness through visual and behavioral data (e.g., dehydration, fatigue).",
-                    created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-                    votes: 5,
-                  },
-                  {
-                    text: "An AR app for smart glasses that translates foreign languages in real-time and overlays the translated text directly onto the world. Whether you’re reading a street sign in Tokyo or having a conversation in Paris, it displays subtitles or translated signage naturally. It also learns context and tone over time, making the translations smarter and more nuanced. Ideal for travelers, international workers, or global students.",
-                    created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-                    votes: 3,
-                  },
-                ];
-                let inserted = 0;
-                seedIdeas.forEach((idea) => {
-                  db.run(
-                    "INSERT INTO ideas (text, votes, created_at) VALUES (?, ?, ?)",
-                    [idea.text, idea.votes, idea.created_at],
-                    function (err) {
-                      if (err) {
-                        reject(err);
-                        return;
-                      }
-                      inserted++;
-                      if (inserted === seedIdeas.length) {
-                        // Wait a moment before resolving to ensure all inserts complete
-                        setTimeout(() => {
-                          database = db;
-                          resolve(db);
-                        }, 100);
-                      }
-                    },
-                  );
-                });
-              } else {
-                database = db;
-                resolve(db);
-              }
-          });
-        },
-      );
-    });
-  });
-
-  try {
-    return await initializing;
-  } finally {
-    initializing = null;
+    insert.free();
   }
+
+  database = db;
+  return db;
 }
 
-function persist(db: sqlite3.Database) {
-  // No-op for sqlite3, as changes are persisted automatically
+function persist(db: initSqlJs.Database) {
+  const dbPath = process.env.SQLITE_DB_PATH ?? DEFAULT_DB_PATH;
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
 }
 
 export async function ensureDatabaseReady() {
@@ -113,17 +82,14 @@ export async function ensureDatabaseReady() {
 
 export async function listAllIdeas() {
   const db = await initialize();
-  return new Promise<any[]>((resolve, reject) => {
-    db.all(
-      "SELECT id, text, votes, created_at FROM ideas ORDER BY datetime(created_at) DESC",
-      (err, rows) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(rows);
-      },
-    );
+  const result = db.exec("SELECT id, text, votes, created_at FROM ideas ORDER BY datetime(created_at) DESC");
+  if (result.length === 0) return [];
+  const columns = result[0].columns;
+  const values = result[0].values;
+  return values.map((row: any[]) => {
+    const obj: any = {};
+    columns.forEach((col, i) => obj[col] = row[i]);
+    return obj;
   });
 }
 
@@ -131,71 +97,44 @@ export async function insertIdea(text: string) {
   const db = await initialize();
   const sanitized = text.trim();
   const created_at = new Date().toISOString();
-  return new Promise((resolve, reject) => {
-    db.run(
-      "INSERT INTO ideas (text, votes, created_at) VALUES (?, 0, ?)",
-      [sanitized, created_at],
-      function (err) {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve({
-          id: this.lastID,
-          text: sanitized,
-          votes: 0,
-          created_at,
-        });
-      },
-    );
-  });
+  const stmt = db.prepare("INSERT INTO ideas (text, votes, created_at) VALUES (?, ?, ?)");
+  const result = stmt.run(sanitized, 0, created_at);
+  stmt.free();
+  persist(db);
+  return {
+    id: result.insertId as number,
+    text: sanitized,
+    votes: 0,
+    created_at,
+  };
 }
 
 export async function incrementIdeaVotes(id: number) {
   const db = await initialize();
-  return new Promise((resolve, reject) => {
-    db.run("UPDATE ideas SET votes = votes + 1 WHERE id = ?", [id], function (err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      if (this.changes === 0) {
-        resolve(null);
-        return;
-      }
-      findIdeaById(id)
-        .then((idea) => {
-          resolve(idea);
-        })
-        .catch(reject);
-    });
-  });
+  const stmt = db.prepare("UPDATE ideas SET votes = votes + 1 WHERE id = ?");
+  const result = stmt.run(id);
+  stmt.free();
+  if (result.changes === 0) {
+    return null;
+  }
+  persist(db);
+  return findIdeaById(id);
 }
 
 export async function findIdeaById(id: number) {
   const db = await initialize();
-  return new Promise((resolve, reject) => {
-    db.get(
-      "SELECT id, text, votes, created_at FROM ideas WHERE id = ?",
-      [id],
-      (err, row) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        if (!row) {
-          resolve(null);
-          return;
-        }
-        resolve(row);
-      },
-    );
-  });
+  const result = db.exec("SELECT id, text, votes, created_at FROM ideas WHERE id = ?", [id]);
+  if (result.length === 0 || result[0].values.length === 0) return null;
+  const columns = result[0].columns;
+  const values = result[0].values[0];
+  const obj: any = {};
+  columns.forEach((col, i) => obj[col] = values[i]);
+  return obj;
 }
 
-export async function closeDatabase() {
+export function closeDatabase() {
   if (database) {
-    database.close();
+    persist(database);
     database = null;
   }
 }
